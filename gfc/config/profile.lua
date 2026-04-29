@@ -1,4 +1,5 @@
 --[[
+-- TODO: as of 29/4/2026 only propellers are suported. add supported for lift blocks
 -- profile is a table the stores specific craft data for the mixer and other functions
 -- i: the index number. think of this a a blocks id
 -- pos: position vector of the block relitive to center of mass.
