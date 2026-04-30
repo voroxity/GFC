@@ -10,5 +10,6 @@
 --  "W" = wodden propeller
 --  "A" = andesite propller
 -- sails: the number of sailes if the block is a propeller baring.
-profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type = "A", sails = 0} }
+-- constant: block related config constants
+profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type = "A", sails = #, constant = #} }
 ]]
