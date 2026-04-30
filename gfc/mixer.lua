@@ -103,7 +103,9 @@ local function computeTranslationForces(profile,F)
     end
     return TForces
 end
-
+-- profile: craft specific layout and block data.
+-- T: a vector that represents the rotational torque about the XYZ axis, aka pitch yaw rol.
+-- F: a vector that represents the transition forces along the XYZ axis.
 local function mixer(profile, T, F)
     local Rforces, T_achieved, err = computeRotationForces(profile, T)
     local TForces = computeTranslationForces(profile,F)
