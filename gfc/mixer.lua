@@ -9,8 +9,12 @@ local function round(x)-- rounds to the nearest intager
 end
 
 local function pressure(v)-- returns the presure at a point (v) on the sublevel.
-    local o = sublevel.getLogicalPose().position-- gets the position of the computer relitive to the world, not the sublevel.
-    return aero.getAirPressure(v + o)-- returns the air pressure at (v + o).
+    local q = sublevel.getLogicalPose().orientation
+    local o = sublevel.getLogicalPose().position
+    local v_quat = quaternion.new(v, 0)
+    local rotated = q * v_quat * q:conjugate()
+    local v_rot = (rotated.v) * (v:length())
+    return aero.getAirPressure(v_rot + o)-- returns the air pressure at (v + o).
 end
 
 local function bearing_RPM(f,s,c,p)-- gets the rpm for the porp baring that meets the required force.
@@ -45,26 +49,41 @@ profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type
 -- compute the forces needed to achieve input torque vector
 local function computeRotationForces(profile, T)
     local data  = { {}, {}, {} }
+    local key = {}
+    local k = 0
     for i = 1, #profile do
         local p = profile[i]
         local ai = p.facing
-        local ci = p:cross(ai)
-        data[1][i] = ci.x
-        data[2][i] = ci.y
-        data[3][i] = ci.z
+        local pos = p.pos
+        local ci = pos:cross(ai)
+        if ci:length() > 1 then
+            k = (k + 1)
+            data[1][k] = ci.x
+            data[2][k] = ci.y
+            data[3][k] = ci.z
+            key[i] = true
+        else
+            key[i] = false
+        end
     end
-    local C = matrix.from2DArray(data)
-    local b = matrix.from2DArray({ {T.x}, {T.y}, {T.z} })
+    k = 0
+    local C = from2DArray(data)
+    local b = from2DArray({ {T.x}, {T.y}, {T.z} })
     local Ct = C:transpose()
     local CCt = C * Ct
-    local y, warning = matrix.solve(CCt, b)
+    local y, warning = solve(CCt, b)
     if warning then
-        print("[moment_solver] " .. warning)
+        print("[computeRotationForces] " .. warning)
     end
     local f_mat = Ct * y
     local Rforces = {}
     for i = 1, #profile do
-        Rforces[i] = f_mat[i][1]
+        if key[i] then
+            k = (k + 1)
+            Rforces[i] = f_mat[k][1]
+        else
+            Rforces[i] = 0
+        end
     end
     --verification
     local T_mat = C * f_mat-- (3 x 1)
@@ -82,21 +101,23 @@ local function computeTranslationForces(profile,F)
     for i=1, #profile do
         local p = profile[i]
         local facing = p.facing
-        if p.type == "A" or "B" or "W" then-- checks to see if entry is a prop block
+        if p.type == "A" or p.type == "B" or p.type == "W" then-- checks to see if entry is a prop block
             x = x + math.abs(facing.x)
             y = y + math.abs(facing.y)
             z = z + math.abs(facing.z)
         end
     end
-    local X = F.x / x
-    local Y = F.y / y
-    local Z = F.z / z
-    local F_out vector.new(X, Y, Z)
+    local F_out = vector.new(
+        x ~= 0 and (F.x / x) or 0,
+        y ~= 0 and (F.y / y) or 0,
+        z ~= 0 and (F.z / z) or 0
+    )
     local TForces = {}
     for i = 1, #profile do
         local p = profile[i]
-        if p.type == "A" or "B" or "W" then-- checks to see if entry is a prop block
-            TForces[i] = F_out:dot(p.facing)
+        if p.type == "A" or p.type == "B" or p.type == "W" then-- checks to see if entry is a prop block
+            local F_dot = F_out:dot(p.facing)
+            TForces[i] = F_dot
         else
             TForces[i] = 0
         end
@@ -116,7 +137,7 @@ local function mixer(profile, T, F)
         local s = P.sails
         local c = P.constant
         local p = pressure(P.pos)
-        if P.type == "A" or "W" then-- checks to see if entry is a prop block
+        if P.type == "A" or P.type == "W" then-- checks to see if entry is a prop block
             RPM[i] = prop_RPM(f,c,p)
         elseif P.type == "B" then
             RPM[i] = bearing_RPM(f,s,c,p)
