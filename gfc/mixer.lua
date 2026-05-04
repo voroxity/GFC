@@ -148,4 +148,22 @@ local function mixer(profile, T, F)
     return RPM, T_achieved, err
 end
 
+local function StopThrust(profile)
+    for i = 1, #profile do
+        local p = profile[i]
+        if p.type == "A" or p.type == "B" or p.type == "W" then p.map.setTargetSpeed(0) end
+    end
+end
+
+local function UpdateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
+    if #profile == #RPM then
+        for i = 1, #profile do
+            local p = profile[i]
+            p.map.setTargetSpeed(RPM[i])
+        end
+    else
+        error("inputs and are not the same length",2)
+    end
+end
+
 return mixer
