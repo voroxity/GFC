@@ -1,4 +1,4 @@
-local matrix = require("rom/apis/matrix")
+--local matrix = require("rom/apis/matrix")
 
 local function round(x)-- rounds to the nearest intager
     if x >= 0 then
@@ -67,11 +67,11 @@ local function computeRotationForces(profile, T)
         end
     end
     k = 0
-    local C = from2DArray(data)
-    local b = from2DArray({ {T.x}, {T.y}, {T.z} })
+    local C = matrix.from2DArray(data)
+    local b = matrix.from2DArray({ {T.x}, {T.y}, {T.z} })
     local Ct = C:transpose()
     local CCt = C * Ct
-    local y, warning = solve(CCt, b)
+    local y, warning = matrix.solve(CCt, b)
     if warning then
         print("[computeRotationForces] " .. warning)
     end

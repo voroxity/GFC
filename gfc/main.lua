@@ -1,14 +1,24 @@
 local so3 = require("SO3")
 local mixer = require("mixer")
+local tw = require("controls/tw")
+local config = require("config/profile")
 
-local tw = require("tw")
+--startup
 tw.init("right")
 local m = peripheral.wrap('top')
 m.setTextScale(0.5)
 m.setCursorPos(0, 0)
 m.clear()
 term.redirect(m)
-
+--load craft profile
+local profile = loadConfig()-- trys to load config
+if profile == nil then--if it cant find a config
+    error("pofile config not found")
+    SetupWizard()
+    os.sleep(1)
+    profile = loadConfig()
+end
+--main loop
 while true do
     local data = tw.update()--pull data from typewritter
 
@@ -31,7 +41,7 @@ while true do
     local g = aero.getDefault().gravity
 
     local force, torque = so3(input.q_desired, input.v_desired, I, q, omega, mass, g, v_world)
-    print(string.format("force vector: %, torque vector: %", force, torque))
+    --print(string.format("force vector: %, torque vector: %", force, torque))
 
     local RPM, T_achieved, err = mixer(profile, torque, force)
     -- RPM: a table with the same length as profile. each entry should be an intager that is positive or negitive.
