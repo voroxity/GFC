@@ -207,6 +207,11 @@ function setupWizard()
     for i = 1, count do
         stepsDone, profile[i] = setupController(i, stepsDone, stepsTotal)
     end
+    --TODO: need to add a section at the end to ask for a the ref point cords
+    for i = 1, #profile do-- sets the r (ref point) as the origin
+        local p = profile[i].pos
+        profile[i].pos = p - r 
+    end
     -- profile has been built
     saveConfig(profile)
 end
