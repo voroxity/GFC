@@ -1,15 +1,20 @@
+--imports
 local so3 = require("SO3")
 local mixer = require("mixer")
 local tw = require("controls/tw")
 local profile = require("config/profile")
+local client = require("networking/client")
 
 --startup
-tw.init("right")
 local m = peripheral.wrap('top')
 m.setTextScale(0.5)
 m.setCursorPos(0, 0)
 m.clear()
 -- term.redirect(m)
+print("initialize typewritter")
+tw.init("right")
+print("setup modem")
+client.setupModem()
 --load craft profile
 local config = profile.loadConfig()-- trys to load config
 if config == nil then--if it cant find a config
