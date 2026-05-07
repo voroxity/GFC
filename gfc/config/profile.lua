@@ -17,17 +17,55 @@ profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type
 local completion = require "cc.completion"
 local CFG_FILE = "/CRAFT_PROFILE"
 
-function saveConfig(cfg)
-    local f = fs.open(CFG_FILE, "w")
-    if f then f.write(textutils.serialize(cfg)); f.close() end
+local function vecToTable(v)
+    return {x = v.x, y = v.y, z = v.z}
 end
-
+local function tableToVec(t)
+    return vector.new(t.x, t.y, t.z)
+end
+-- Write prof to a file
+function saveConfig(prof)
+    local file = fs.open(CFG_FILE, "w")
+    if not file then
+        error("Could not open file for writing: " .. CFG_FILE)
+    end
+    local out = {}
+    for i, entry in ipairs(prof) do
+        print(entry.map)
+        out[i] = {
+            pos      = vecToTable(entry.pos),
+            facing   = vecToTable(entry.facing),
+            type     = entry.type,
+            sails    = entry.sails,
+            constant = entry.constant,
+            map      = peripheral.getName(entry.map),  -- save the name string
+        }
+    end
+    file.write(textutils.serialise(out))
+    file.close()
+end
+-- Read prof from a file
 function loadConfig()
-    if not fs.exists(CFG_FILE) then return nil end
-    local f = fs.open(CFG_FILE, "r")
-    if not f then return nil end
-    local d = f.readAll(); f.close()
-    return textutils.unserialize(d)
+    if not fs.exists(CFG_FILE) then return nil, "File does not exist: " .. CFG_FILE end
+    local file = fs.open(CFG_FILE, "r")
+    if not file then return nil, "Could not open file for reading: " .. CFG_FILE end
+    local raw = textutils.unserialise(file.readAll())
+    file.close()
+    if not raw then return nil, "Failed to parse file: " .. CFG_FILE end
+    local out = {}
+    for i, entry in ipairs(raw) do
+        local handle = peripheral.wrap(entry.map)
+        if not handle then error("Could not wrap peripheral: " .. tostring(entry.map)) end
+        out[i] = {
+            pos      = tableToVec(entry.pos),
+            facing   = tableToVec(entry.facing),
+            type     = entry.type,
+            sails    = entry.sails,
+            constant = entry.constant,
+            map      = handle,  -- restored as a live peripheral
+        }
+    end
+    return out
 end
 
 local DIRECTION_VECTORS = {
@@ -169,7 +207,7 @@ function setupWizard()
     for i = 1, count do
         stepsDone, profile[i] = setupController(i, stepsDone, stepsTotal)
     end
-
+    -- profile has been built
     saveConfig(profile)
 end
 
