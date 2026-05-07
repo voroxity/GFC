@@ -58,7 +58,7 @@ while true do
         local response
         if ok then
             response = { success = true, value = result }
-            print("Sending orientation: " .. tostring(result))
+            print("Sending RefPoint: " .. tostring(result))
         else
             response = { success = false, error = tostring(result) }
             print("Error: " .. tostring(result))

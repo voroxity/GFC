@@ -5,16 +5,17 @@ local SERVER_ID   = nil   -- set this to the server's computer ID if using wired
 local CHANNEL     = 1     -- must match server (wireless only)
 local REPLY_CH    = 2     -- client reply channel (wireless only)
 local TIMEOUT     = 5     -- seconds to wait for a response
-
+local pretty = require "cc.pretty"
 --Modem detection
 local net = {}
 local function setupModem()
+    print("warapping wired modem")
     local wired = peripheral.find("modem", function(_, m) return not m.isWireless() end)
     if wired then
         if not SERVER_ID then
             error("Wired mode requires SERVER_ID to be set at the top of client.lua")
         end
-        print("Using wired modem (rednet) → server ID " .. SERVER_ID)
+        print("Using wired modem (rednet) -> server ID " .. SERVER_ID)
         peripheral.find("modem", rednet.open)
         net.mode = "wired"
         function net.send(message)
@@ -27,6 +28,7 @@ local function setupModem()
         end
         return
     end
+    print("Could not find wired modem. Attempting to find wireless modem")
     local wireless = peripheral.find("modem", function(_, m) return m.isWireless() end)
     if wireless then
         print("Using wireless modem (channel " .. CHANNEL .. ", reply on " .. REPLY_CH .. ")")
@@ -70,11 +72,13 @@ local function getRefPoint()
     end
 end
 
---Example usage
+--[[Example usage
 setupModem()
-local orientation, err = getOrientation()
-if orientation then
-    print("Orientation: " .. tostring(orientation))
+local RefPoint, err = getRefPoint()
+if RefPoint then
+    print("RefPoint aquired")
+    pretty.pretty_print(RefPoint.position)
+    pretty.pretty_print(RefPoint.orientation)
 else
     print("Error: " .. err)
-end
+end]]
