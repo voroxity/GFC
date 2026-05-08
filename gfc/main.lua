@@ -4,18 +4,24 @@ local mixer = require("mixer")
 local tw = require("controls/tw")
 local profile = require("config/profile")
 local client = require("networking/client")
-
---startup
+--[[
+initialization setps
+1: conect tw and make sure it works.
+2: setup modem and make sure ref point server can get and send info.
+3: load craft profile from config.
+    3.1: run setup wizard if profile cant be found then load it.
+]]
+-- STARTUP
 local m = peripheral.wrap('top')
 m.setTextScale(0.5)
 m.setCursorPos(0, 0)
 m.clear()
--- term.redirect(m)
+--term.redirect(m)
+-- INITIALIZATION
 print("initialize typewritter")
-tw.init("right")
-print("setup modem")
-client.setupModem()
---load craft profile
+tw.init("right")-- initialize typewritter
+print("setting up client modem")
+client.setupModem()-- modem setup
 local config = profile.loadConfig()-- trys to load config
 if config == nil then--if it cant find a config
     print("Profile config not found starting wizard...")
@@ -25,6 +31,7 @@ end
 --main loop
 while true do
     local data = tw.update()--pull data from typewritter
+    local server = client.getRefPoint()
 
     local input = {--defaults for pilot inputs
         q_desired = quaternion.new(vector.new(0, 1, 0), 0),
@@ -47,9 +54,18 @@ while true do
     local force, torque = so3(input.q_desired, input.v_desired, I, q, omega, mass, g, v_world)
     --print(string.format("force vector: %, torque vector: %", force, torque))
 
-    local RPM, T_achieved, err = mixer(config, torque, force)
+    --math to account for a changing COM
+    local revisedConfig = config
+    local COMvector = (server.position - sublevel.getLogicalPose().position)
+    for i = 1, #revisedConfig do
+        revisedConfig[i].pos = revisedConfig[i].pos + COMvector
+    end
+
+    local RPM, T_achieved, err = mixer.mixer(revisedConfig, torque, force)
     -- RPM: a table with the same length as profile. each entry should be an intager that is positive or negitive.
     -- T_achieved: rotation math output. should be the same as torque.
     -- err: a value that represents the error of the mixer rotation math.
-    os.sleep(0.5)
+
+    mixer.updateRPM(revisedConfig,RPM)
+    os.sleep(0.1)
 end
