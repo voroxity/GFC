@@ -155,7 +155,7 @@ local function StopThrust(profile)
     end
 end
 
-local function UpdateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
+local function updateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
     if #profile == #RPM then
         for i = 1, #profile do
             local p = profile[i]
@@ -166,4 +166,8 @@ local function UpdateRPM(profile, RPM)-- a function that sets the rpm of a rotat
     end
 end
 
-return mixer
+return {
+    mixer = mixer,
+    StopThrust = StopThrust,
+    updateRPM = updateRPM
+}
