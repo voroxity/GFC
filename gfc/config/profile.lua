@@ -31,7 +31,6 @@ function saveConfig(prof)
     end
     local out = {}
     for i, entry in ipairs(prof) do
-        print(entry.map)
         out[i] = {
             pos      = vecToTable(entry.pos),
             facing   = vecToTable(entry.facing),
@@ -200,21 +199,37 @@ function setupWizard()
         end
     end
 
-    local stepsTotal = (count * 5) + 1
+    local stepsTotal = (count * 5) + 2
     local stepsDone  = 1
     local profile    = {}
 
     for i = 1, count do
         stepsDone, profile[i] = setupController(i, stepsDone, stepsTotal)
     end
-    --TODO: need to add a section at the end to ask for a the ref point cords
+
+    local x, y, z
+    while true do
+        prompt(progressText(stepsDone, stepsTotal),
+            string.format("Step %d - !!IMPORTANT!! Enter the position of the refrence point.", stepsDone))
+        io.write("X: "); x = tonumber(read())
+        io.write("Y: "); y = tonumber(read())
+        io.write("Z: "); z = tonumber(read())
+        prompt(progressText(stepsDone, stepsTotal),
+            string.format("Step %d - Confirm position: %d %d %d\nConfirm? (Y/N)", stepsDone, x, y, z))
+        io.write("> ")
+        local confirm = read(nil, nil, function(t) return completion.choice(t, YES_NO) end)
+        if confirm == "Y" then break end
+    end
+
+    local r = vector.new(x,y,z)
     for i = 1, #profile do-- sets the r (ref point) as the origin
-        local p = profile[i].pos
-        profile[i].pos = p - r 
+        profile[i].pos = profile[i].pos - r
     end
     -- profile has been built
     saveConfig(profile)
 end
+
+--setupWizard()
 
 return {
     saveConfig=saveConfig,
