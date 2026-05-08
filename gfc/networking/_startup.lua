@@ -47,6 +47,7 @@ end
 
 --Main
 setupModem()
+print(os.getComputerID())
 print("Server ready and listening...")
 while true do
     local senderID, message = net.receive()

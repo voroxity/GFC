@@ -127,7 +127,7 @@ end
 -- profile: craft specific layout and block data.
 -- T: a vector that represents the rotational torque about the XYZ axis, aka pitch yaw rol.
 -- F: a vector that represents the transition forces along the XYZ axis.
-local function mixer(profile, T, F)
+function mixer(profile, T, F)
     local Rforces, T_achieved, err = computeRotationForces(profile, T)
     local TForces = computeTranslationForces(profile,F)
     local RPM = {}
@@ -148,14 +148,14 @@ local function mixer(profile, T, F)
     return RPM, T_achieved, err
 end
 
-local function StopThrust(profile)
+function StopThrust(profile)
     for i = 1, #profile do
         local p = profile[i]
         if p.type == "A" or p.type == "B" or p.type == "W" then p.map.setTargetSpeed(0) end
     end
 end
 
-local function updateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
+function updateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
     if #profile == #RPM then
         for i = 1, #profile do
             local p = profile[i]

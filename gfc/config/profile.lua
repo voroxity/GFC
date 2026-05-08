@@ -20,7 +20,7 @@ local CFG_FILE = "/CRAFT_PROFILE"
 local function vecToTable(v)
     return {x = v.x, y = v.y, z = v.z}
 end
-local function tableToVec(t)
+function tableToVec(t)
     return vector.new(t.x, t.y, t.z)
 end
 -- Write prof to a file
@@ -232,6 +232,7 @@ end
 --setupWizard()
 
 return {
+    tableToVec=tableToVec,
     saveConfig=saveConfig,
     loadConfig=loadConfig,
     setupWizard=setupWizard

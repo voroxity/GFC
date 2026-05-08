@@ -8,7 +8,7 @@ local TIMEOUT     = 5     -- seconds to wait for a response
 local pretty = require "cc.pretty"
 --Modem detection
 local net = {}
-local function setupModem()
+function setupModem()
     print("warapping wired modem")
     local wired = peripheral.find("modem", function(_, m) return not m.isWireless() end)
     if wired then
@@ -60,7 +60,7 @@ end
 
 --- Fetches the sublevel information from the server computer.
 -- @return value, or nil + error string on failure
-local function getRefPoint()
+function getRefPoint()
     net.send("GET_REF")
     local response = net.receive()
     if response == nil then
@@ -82,3 +82,8 @@ if RefPoint then
 else
     print("Error: " .. err)
 end]]
+
+return {
+    setupModem = setupModem,
+    getRefPoint = getRefPoint
+}

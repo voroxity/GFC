@@ -16,18 +16,19 @@ local m = peripheral.wrap('top')
 m.setTextScale(0.5)
 m.setCursorPos(0, 0)
 m.clear()
---term.redirect(m)
+term.redirect(m)
 -- INITIALIZATION
 print("initialize typewritter")
 tw.init("right")-- initialize typewritter
 print("setting up client modem")
-client.setupModem()-- modem setup
+setupModem()-- modem setup
 local config = profile.loadConfig()-- trys to load config
 if config == nil then--if it cant find a config
     print("Profile config not found starting wizard...")
     profile.setupWizard()
     config = profile.loadConfig()
 end
+mixer.StopThrust(config)
 --main loop
 while true do
     local data = tw.update()--pull data from typewritter
@@ -56,7 +57,7 @@ while true do
 
     --math to account for a changing COM
     local revisedConfig = config
-    local COMvector = (server.position - sublevel.getLogicalPose().position)
+    local COMvector = (profile.tableToVec(server.position) - sublevel.getLogicalPose().position)
     for i = 1, #revisedConfig do
         revisedConfig[i].pos = revisedConfig[i].pos + COMvector
     end
