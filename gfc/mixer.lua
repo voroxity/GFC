@@ -8,6 +8,12 @@ local function round(x)-- rounds to the nearest intager
     end 
 end
 
+local function getArm(pos)
+    local comWorld = tableToVec(sublevel.getLogicalPose().position)
+    local refWorld = tableToVec(server.position)
+    return pos - (comWorld - refWorld)
+end
+
 local function pressure(v)-- returns the presure at a point (v) on the sublevel.
     local q = sublevel.getLogicalPose().orientation
     local o = sublevel.getLogicalPose().position
@@ -54,7 +60,7 @@ local function computeRotationForces(profile, T)
     for i = 1, #profile do
         local p = profile[i]
         local ai = p.facing
-        local pos = p.pos
+        local pos = getArm(p.pos)
         local ci = pos:cross(ai)
         if ci:length() > 1 then
             k = (k + 1)
@@ -136,7 +142,7 @@ function mixer(profile, T, F)
         local f = Rforces[i] + TForces[i]
         local s = P.sails
         local c = P.constant
-        local p = pressure(P.pos)
+        local p = pressure(getArm(P.pos))
         if P.type == "A" or P.type == "W" then-- checks to see if entry is a prop block
             RPM[i] = prop_RPM(f,c,p)
         elseif P.type == "B" then
