@@ -1,4 +1,5 @@
 --local matrix = require("rom/apis/matrix")
+local client = require("networking/client")
 
 local function round(x)-- rounds to the nearest intager
     if x >= 0 then
@@ -10,7 +11,7 @@ end
 
 local function getArm(pos)
     local comWorld = tableToVec(sublevel.getLogicalPose().position)
-    local refWorld = tableToVec(server.position)
+    local refWorld = tableToVec(client.getRefPoint().position)
     return pos - (comWorld - refWorld)
 end
 

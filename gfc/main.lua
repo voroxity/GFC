@@ -32,7 +32,6 @@ mixer.StopThrust(config)
 --main loop
 while true do
     local data = tw.update()--pull data from typewritter
-    local ref = client.getRefPoint()
 
     local input = {--defaults for pilot inputs
         q_desired = quaternion.new(vector.new(0, 1, 0), 0),
@@ -56,7 +55,7 @@ while true do
     --print(string.format("force vector: %, torque vector: %", force, torque))
 
     -- math to account for a changing COM without mutating the saved config
-    local COMvector = (profile.tableToVec(ref.position) - sublevel.getLogicalPose().position)
+    local COMvector = (profile.tableToVec(client.getRefPoint().position) - sublevel.getLogicalPose().position)
     local revisedConfig = {}
     for i = 1, #config do
         revisedConfig[i] = {
