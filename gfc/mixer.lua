@@ -151,15 +151,18 @@ end
 function StopThrust(profile)
     for i = 1, #profile do
         local p = profile[i]
-        if p.type == "A" or p.type == "B" or p.type == "W" then p.map.setTargetSpeed(0) end
+        if p.type == "A" or p.type == "B" or p.type == "W" then peripheral.wrap(p.name).setTargetSpeed(0) end
     end
 end
 
 function updateRPM(profile, RPM)-- a function that sets the rpm of a rotational speed controller
+    for i=1, #RPM do
+        print(string.format("Updating RPM for block %d: %d", i, RPM[i]))
+    end
     if #profile == #RPM then
         for i = 1, #profile do
             local p = profile[i]
-            p.map.setTargetSpeed(RPM[i])
+            peripheral.wrap(p.name).setTargetSpeed(RPM[i])
         end
     else
         error("inputs and are not the same length",2)

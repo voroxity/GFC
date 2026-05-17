@@ -1,21 +1,23 @@
 --[[
-TODO: as of 29/4/2026 only propellers are suported. add supported for lift blocks
-profile is a table the stores specific craft data for the mixer and other functions
-i: the index number. think of this a a blocks id
-pos: position vector of the block relitive to center of mass.
+TODO: as of 29/4/2026 only propellers are supported. add support for lift blocks
+profile is a table that stores specific craft data for the mixer and other functions
+i: the index number. think of this as a block's id
+pos: position vector of the block relative to the reference point.
     this represents the moment arm for force calculations.
 facing: a unit vector that denotes the direction the block is facing.
 type: the type of block.
-    "B" = propeller baring 
-    "W" = wodden propeller
-    "A" = andesite propller
-sails: the number of sailes if the block is a propeller baring.
+    "B" = propeller bearing
+    "W" = wooden propeller
+    "A" = andesite propeller
+sails: the number of sails if the block is a propeller bearing.
 constant: block related config constants.
-map: the peripheral that block(s) of index i are wraped to.
-profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type = "A", sails = #, constant = #, map = peripheral.wrap("name")} }
+name: the name of the peripheral that block(s) of index i are wrapped to.
+profile = { [i] = {pos = vector.new(x, y, z), facing = vector.new(x, y, z), type = "A", sails = #, constant = #, name = "controller1"} }
 ]]
 local completion = require "cc.completion"
-local CFG_FILE = "/CRAFT_PROFILE"
+local CFG_FILE = "profile.json"
+
+local client = require("networking/client")
 
 local function vecToTable(v)
     return {x = v.x, y = v.y, z = v.z}
@@ -23,6 +25,7 @@ end
 function tableToVec(t)
     return vector.new(t.x, t.y, t.z)
 end
+
 -- Write prof to a file
 function saveConfig(prof)
     local file = fs.open(CFG_FILE, "w")
@@ -37,31 +40,30 @@ function saveConfig(prof)
             type     = entry.type,
             sails    = entry.sails,
             constant = entry.constant,
-            map      = peripheral.getName(entry.map),  -- save the name string
+            name     = entry.name,
         }
     end
-    file.write(textutils.serialise(out))
+    file.write(textutils.serialiseJSON(out))
     file.close()
 end
+
 -- Read prof from a file
 function loadConfig()
     if not fs.exists(CFG_FILE) then return nil, "File does not exist: " .. CFG_FILE end
     local file = fs.open(CFG_FILE, "r")
     if not file then return nil, "Could not open file for reading: " .. CFG_FILE end
-    local raw = textutils.unserialise(file.readAll())
+    local raw = textutils.unserialiseJSON(file.readAll())
     file.close()
     if not raw then return nil, "Failed to parse file: " .. CFG_FILE end
     local out = {}
     for i, entry in ipairs(raw) do
-        local handle = peripheral.wrap(entry.map)
-        if not handle then error("Could not wrap peripheral: " .. tostring(entry.map)) end
         out[i] = {
             pos      = tableToVec(entry.pos),
             facing   = tableToVec(entry.facing),
             type     = entry.type,
             sails    = entry.sails,
             constant = entry.constant,
-            map      = handle,  -- restored as a live peripheral
+            name     = entry.name,
         }
     end
     return out
@@ -107,10 +109,11 @@ local function progressText(stepsDone, stepsTotal)
     return math.floor((stepsDone / stepsTotal) * 100) .. "%"
 end
 
+-- Returns stepsDone, raw plotyard position vector, and the rest of the entry (minus pos).
 local function setupController(index, stepsDone, stepsTotal)
     local step = index + 1
 
-    local mapName = confirmedRead(
+    local name = confirmedRead(
         progressText(stepsDone, stepsTotal),
         string.format("Step %d.1 - Speed controller peripheral name?", step),
         completion.peripheral
@@ -156,25 +159,27 @@ local function setupController(index, stepsDone, stepsTotal)
     local x, y, z
     while true do
         prompt(progressText(stepsDone, stepsTotal),
-            string.format("Step %d.5 - Stand on the block and enter its position.", step))
+            string.format("Step %d.5 - Stand on the block and enter its PLOTYARD coordinates.", step))
         io.write("X: "); x = tonumber(read())
         io.write("Y: "); y = tonumber(read())
         io.write("Z: "); z = tonumber(read())
         prompt(progressText(stepsDone, stepsTotal),
-            string.format("Step %d.5 - Confirm position: %d %d %d\nConfirm? (Y/N)", step, x, y, z))
+            string.format("Step %d.5 - Confirm plotyard position: %d %d %d\nConfirm? (Y/N)", step, x, y, z))
         io.write("> ")
         local confirm = read(nil, nil, function(t) return completion.choice(t, YES_NO) end)
         if confirm == "Y" then break end
     end
     stepsDone = stepsDone + 1
 
-    return stepsDone, {
-        pos      = vector.new(x, y - 1, z),
+    -- y-1 converts "standing on block" coords to the block itself
+    local plotyardPos = vector.new(x, y - 1, z)
+
+    return stepsDone, plotyardPos, {
         facing   = DIRECTION_VECTORS[facing],
         type     = blockType,
         sails    = sails,
         constant = constant,
-        map      = peripheral.wrap(mapName),
+        name     = name,
     }
 end
 
@@ -199,41 +204,43 @@ function setupWizard()
         end
     end
 
-    local stepsTotal = (count * 5) + 2
+    local stepsTotal = (count * 5) + 1
     local stepsDone  = 1
-    local profile    = {}
 
+    -- Collect all controller data with raw plotyard positions
+    local plotyardPositions = {}
+    local partialEntries    = {}
     for i = 1, count do
-        stepsDone, profile[i] = setupController(i, stepsDone, stepsTotal)
+        local newStepsDone, plotyardPos, entry = setupController(i, stepsDone, stepsTotal)
+        stepsDone            = newStepsDone
+        plotyardPositions[i] = plotyardPos
+        partialEntries[i]    = entry
     end
 
-    local x, y, z
-    while true do
-        prompt(progressText(stepsDone, stepsTotal),
-            string.format("Step %d - !!IMPORTANT!! Enter the position of the refrence point.", stepsDone))
-        io.write("X: "); x = tonumber(read())
-        io.write("Y: "); y = tonumber(read())
-        io.write("Z: "); z = tonumber(read())
-        prompt(progressText(stepsDone, stepsTotal),
-            string.format("Step %d - Confirm position: %d %d %d\nConfirm? (Y/N)", stepsDone, x, y, z))
-        io.write("> ")
-        local confirm = read(nil, nil, function(t) return completion.choice(t, YES_NO) end)
-        if confirm == "Y" then break end
+    -- Fetch the three reference positions from globals
+    local comPlotyard = tableToVec(sublevel.getCenterOfMass())
+    local comWorld    = tableToVec(sublevel.getLogicalPose().position)
+    local refWorld    = tableToVec(client.getRefPoint().position)
+
+    -- Build final profile:
+    --   prop_world = com_world + (prop_plotyard - com_plotyard)
+    --   pos        = prop_world - ref_world
+    --              = (com_world - ref_world) + (prop_plotyard - com_plotyard)
+    local comOffset = comWorld - refWorld
+    local profile   = {}
+    for i = 1, count do
+        profile[i]     = partialEntries[i]
+        profile[i].pos = comOffset + (plotyardPositions[i] - comPlotyard)
     end
 
-    local r = vector.new(x,y,z)
-    for i = 1, #profile do-- sets the r (ref point) as the origin
-        profile[i].pos = profile[i].pos - r
-    end
-    -- profile has been built
     saveConfig(profile)
 end
 
 --setupWizard()
 
 return {
-    tableToVec=tableToVec,
-    saveConfig=saveConfig,
-    loadConfig=loadConfig,
-    setupWizard=setupWizard
+    tableToVec  = tableToVec,
+    saveConfig  = saveConfig,
+    loadConfig  = loadConfig,
+    setupWizard = setupWizard,
 }

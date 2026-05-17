@@ -21,7 +21,7 @@ term.redirect(m)
 print("initialize typewritter")
 tw.init("right")-- initialize typewritter
 print("setting up client modem")
-setupModem()-- modem setup
+client.setupModem()-- modem setup
 local config = profile.loadConfig()-- trys to load config
 if config == nil then--if it cant find a config
     print("Profile config not found starting wizard...")
@@ -32,7 +32,7 @@ mixer.StopThrust(config)
 --main loop
 while true do
     local data = tw.update()--pull data from typewritter
-    local server = client.getRefPoint()
+    local ref = client.getRefPoint()
 
     local input = {--defaults for pilot inputs
         q_desired = quaternion.new(vector.new(0, 1, 0), 0),
@@ -55,11 +55,18 @@ while true do
     local force, torque = so3(input.q_desired, input.v_desired, I, q, omega, mass, g, v_world)
     --print(string.format("force vector: %, torque vector: %", force, torque))
 
-    --math to account for a changing COM
-    local revisedConfig = config
-    local COMvector = (profile.tableToVec(server.position) - sublevel.getLogicalPose().position)
-    for i = 1, #revisedConfig do
-        revisedConfig[i].pos = revisedConfig[i].pos + COMvector
+    -- math to account for a changing COM without mutating the saved config
+    local COMvector = (profile.tableToVec(ref.position) - sublevel.getLogicalPose().position)
+    local revisedConfig = {}
+    for i = 1, #config do
+        revisedConfig[i] = {
+            pos = config[i].pos + COMvector,
+            facing = config[i].facing,
+            type = config[i].type,
+            sails = config[i].sails,
+            constant = config[i].constant,
+            name = config[i].name,
+        }
     end
 
     local RPM, T_achieved, err = mixer.mixer(revisedConfig, torque, force)
