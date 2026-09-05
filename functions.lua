@@ -186,6 +186,7 @@ function handshake(config)
         until confirmation ~= nil
         if confirmation == master and confirmMessage == hash then-- validates confirmation signal
             print("Handshake complete.\nConnected to master computer with ID: " .. master)
+            return config
         else
             peripheral.find("modem", rednet.close)
             error("Failed to complete handshake with master computer.")
