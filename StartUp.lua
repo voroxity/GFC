@@ -5,11 +5,11 @@ local net = {}
 --initialization stage
 term.clear()
 term.setCursorPos(1, 1)
-SW("Starting script...")
+print("Starting script...")
 local config = loadConfig()-- loads the config file, if it exists
-SW("Loading config...")
+print("Loading config...")
 if config == nil then-- if the config file does not exist, create one and have the user input the necessary information
-    SW("No config found\ncreating default config...\n")
+    print("No config found\ncreating default config...\n")
     local BLOCK_TYPES = {"SLAVE", "MASTER"}
     config = {
         type = confirmedRead(
@@ -26,7 +26,7 @@ if config == nil then-- if the config file does not exist, create one and have t
     os.sleep(5)
     os.reboot()
 end
-SW("Config found")
-SW("TYPE:" .. config.type)
-SW("NETWORK ID:" .. config.id)
+print("Config found")
+print("TYPE:" .. config.type)
+print("NETWORK ID:" .. config.id)
 config = handshake(config)

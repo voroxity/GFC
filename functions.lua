@@ -104,7 +104,7 @@ function handshake(config)
     if config.type == "MASTER" then
         config.slaves = config.slaves or {} -- ensure config.slaves always exists as a table
         --Master computer will broadcast a message to all slave computers, and wait for them to respond with their own unique ID.
-        SW("searching for slave computers...")
+        print("searching for slave computers...")
         sleep(2)
         rednet.broadcast(hash, hash)
 
@@ -119,11 +119,10 @@ function handshake(config)
                         slaves[senderID] = true
                         slaveCount = slaveCount + 1
                         rednet.send(senderID, hash, hash) -- send confirmation back to the slave
-                        print(senderID)
                         sleep(0.25)
                     end
                 else
-                    SW("Received invalid handshake message from computer ID: " .. senderID)
+                    print("Received invalid handshake message from computer ID: " .. senderID)
                 end
             end
         end
@@ -136,9 +135,9 @@ function handshake(config)
 
         if slaveCount == #config.slaves then
             if slaveCount == 0 then
-                SW("No slaves configured and none responded.")
+                print("No slaves configured and none responded.")
             else
-                SW("All slaves connected (" .. slaveCount .. "/" .. #config.slaves .. ").")
+                print("All slaves connected (" .. slaveCount .. "/" .. #config.slaves .. ").")
             end
 
         elseif slaveCount > #config.slaves then
@@ -147,10 +146,10 @@ function handshake(config)
                 if not knownSlaves[id] then
                     table.insert(config.slaves, id)
                     knownSlaves[id] = true
-                    SW("New slave found and added to config: " .. id)
+                    print("New slave found and added to config: " .. id)
                 end
             end
-            saveConfig(config) -- TODO: replace with your actual config-saving function
+            saveConfig(config)
 
         else
             -- Fewer slaves responded than expected — report which ones are missing
@@ -164,20 +163,29 @@ function handshake(config)
             error("Missing slave(s)")
         end
 
-        SW("Handshake complete. " .. slaveCount .. " slave(s) found.")
+        print("Handshake complete. " .. slaveCount .. " slave(s) found.")
         return config
 
     elseif config.type == "SLAVE" then
-        SW("Waiting for connection to master computer...")
-        local master, message = rednet.receive(hash)
-        local confirmation, confirmMessage
+        print("Waiting master computer...")
+        local master, message = rednet.receive(hash)-- waits for master broadcast
         if message ~= hash then error("Received invalid handshake message from master computer. Please check the network ID and try again.") end
-        repeat
+        print("handshake started")
+        if not config.master then
+            config.master = master
+            saveConfig(config)
+            print("paring slave to master with iD:" .. master)
+        elseif config.master ~= master then
+            printError("ERROR:\nmaster computer has correct network id but incorect computer id.")
+            error("\nnew Master with id:" .. master .. "\nold master id:" .. config.master)
+        end
+        local confirmation, confirmMessage
+        repeat-- replay to master and wait till confirmation signal
             rednet.send(master, hash, hash)
             confirmation, confirmMessage = rednet.receive(hash, 0.05)
         until confirmation ~= nil
-        if confirmation == master and confirmMessage == hash then
-            SW("Handshake complete. Connected to master computer with ID: " .. master)
+        if confirmation == master and confirmMessage == hash then-- validates confirmation signal
+            print("Handshake complete.\nConnected to master computer with ID: " .. master)
         else
             peripheral.find("modem", rednet.close)
             error("Failed to complete handshake with master computer.")
