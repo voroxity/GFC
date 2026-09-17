@@ -1,7 +1,6 @@
-local completion = require "cc.completion"
+local completion = require("cc.completion")
 local wrap = require("cc.strings").wrap
-local sha = require "sha256"
-local pretty = require "cc.pretty"
+require("sha256")
 local CFG_FILE = "GFC_config.toml"
 local SW_SPEED = 80
 local DefaultSettings = {
@@ -92,13 +91,51 @@ function confirmedRead(title, message, completionFn)
     end
 end
 
+--displays text to the screen at a specified speed, wrapping lines as necessary, more versitial then slowWrite
+function SW(text)
+    if SW_SPEED < 0 then
+        Error("Rate must be positive")
+    end
+
+    local wrapped_lines = wrap(tostring(text), (term.getSize()))
+    local wrapped_str = table.concat(wrapped_lines)
+    local len = #wrapped_str
+
+    if SW_SPEED <= 20 then
+        --slow enough that per-character sleeping still works fine
+        local to_sleep = 1 / SW_SPEED
+        for n = 1, len do
+            sleep(to_sleep)
+            write(wrapped_str:sub(n, n))
+        end
+    else
+        --faster than tick rate: batch several chars into each tick,
+        --using a fractional accumulator so the average rate is exact
+        local chars_per_tick = SW_SPEED / 20
+        local owed = 0
+        local n = 1
+        while n <= len do
+            sleep(0.05)
+            owed = owed + chars_per_tick
+            local to_write = math.floor(owed)
+            if to_write > 0 then
+                local chunk_end = math.min(n + to_write - 1, len)
+                write(wrapped_str:sub(n, chunk_end))
+                owed = owed - (chunk_end - n + 1)
+                n = chunk_end + 1
+            end
+        end
+    end
+    print("")
+    sleep(math.random(5,10)/100)
+end
 
 --creates a look table for validation
-local function lookup(t, key)
-    if not t then return nil end
+function lookup(tbl, mode)
+    if not tbl then return nil end
     local known = {}
-    for k, v in pairs(t) do
-        known[key == "value" and v or k] = true
+    for key, value in pairs(tbl) do
+        known[mode == "value" and value or key] = true
     end
     return known
 end
@@ -202,15 +239,7 @@ end
 local function findPeripheralsByType(targetType)
     local matches = {}
     for _, name in ipairs(peripheral.getNames()) do
-        local pType = peripheral.getType(name)
-        if type(pType) == "table" then
-            for _, t in ipairs(pType) do
-                if t == targetType then
-                    matches[#matches + 1] = name
-                    break
-                end
-            end
-        elseif pType == targetType then
+        if peripheral.hasType(name, targetType) then
             matches[#matches + 1] = name
         end
     end
@@ -242,14 +271,15 @@ function Validate()
     --"Create_RotationSpeedController"
     elseif config.type == "SLAVE" then
         local sender, message = rednet.receive(hash)
-        os.sleep(0.25)
+        sleep(0.25)
         print("parsing peripheral(s)")
         if sender == config.master and message == "Validate" then
             local RSC = findPeripheralsByType("Create_RotationSpeedController")
+            config.actors = config.actors or {}
             local KnownActors = lookup(config.actors,"key")
             local count = 0
             for _ in pairs(config.actors) do count = count + 1 end
-            if not config.actors then
+            if count == 0 then
                 print("no previous actors found")
                 for i = 1, #RSC, 1 do
                     config.actors[RSC[i]] = {type = peripheral.getType(RSC[i])}
@@ -260,7 +290,7 @@ function Validate()
                 print("all actors are accounted for")
                 rednet.send(sender,"clear", hash)
             elseif #RSC > count then
-                for _,name in pairs(RSC) do
+                for _,name in ipairs(RSC) do
                     if not KnownActors[name] then
                         if config.settings.autoaddnew then
                             print(name)
