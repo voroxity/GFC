@@ -1,6 +1,4 @@
-local functions = require("functions")
-local completion = require "cc.completion"
-local net = {}
+require("functions")
 
 --stage 1:initialization.
 startup()

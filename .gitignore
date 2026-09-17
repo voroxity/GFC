@@ -3,3 +3,4 @@ GFC_config.toml
 StartUp.lua
 *.log
 /main/untested
+/main/tested code

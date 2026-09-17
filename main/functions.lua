@@ -92,60 +92,15 @@ function confirmedRead(title, message, completionFn)
     end
 end
 
---displays text to the screen at a specified speed, wrapping lines as necessary, more versitial then slowWrite
-function SW(text)
-    if SW_SPEED < 0 then
-        Error("Rate must be positive")
-    end
-
-    local wrapped_lines = wrap(tostring(text), (term.getSize()))
-    local wrapped_str = table.concat(wrapped_lines)
-    local len = #wrapped_str
-
-    if SW_SPEED <= 20 then
-        --slow enough that per-character sleeping still works fine
-        local to_sleep = 1 / SW_SPEED
-        for n = 1, len do
-            sleep(to_sleep)
-            write(wrapped_str:sub(n, n))
-        end
-    else
-        --faster than tick rate: batch several chars into each tick,
-        --using a fractional accumulator so the average rate is exact
-        local chars_per_tick = SW_SPEED / 20
-        local owed = 0
-        local n = 1
-        while n <= len do
-            sleep(0.05)
-            owed = owed + chars_per_tick
-            local to_write = math.floor(owed)
-            if to_write > 0 then
-                local chunk_end = math.min(n + to_write - 1, len)
-                write(wrapped_str:sub(n, chunk_end))
-                owed = owed - (chunk_end - n + 1)
-                n = chunk_end + 1
-            end
-        end
-    end
-    print("")
-    sleep(math.random(5,10)/100)
-end
 
 --creates a look table for validation
-function lookup(table,type)
-    if table then
-        local known = {}
-        for key, value in pairs(table) do
-            if type == "value" then
-                known[value] = true
-            elseif type == "key" then
-                known[key] = true
-            end
-        end
-        return known
-    else
-        return nil
+local function lookup(t, key)
+    if not t then return nil end
+    local known = {}
+    for k, v in pairs(t) do
+        known[key == "value" and v or k] = true
     end
+    return known
 end
 
 --establishes a handshake between the master and slave computers, ensuring that they are on the same network and can communicate with each other
