@@ -1,2 +1,5 @@
-config.json
+GFC_config.toml
 /testing
+StartUp.lua
+*.log
+/main/untested
